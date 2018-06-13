@@ -1,0 +1,16 @@
+{
+  "author": "fritz",
+  "bugs": {
+    "url": "https://github.com/filecoin-project/go-leb128/issues"
+  },
+  "gx": {
+    "dvcsimport": "github.com/filecoin-project/go-leb128"
+  },
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "",
+  "name": "go-leb128",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.0.0"
+}
+
