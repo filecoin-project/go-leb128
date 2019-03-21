@@ -94,6 +94,13 @@ func TestFromBigInt(t *testing.T) {
 	}
 }
 
+func BenchmarkFromBigInt(b *testing.B) {
+	val := int64(2141192192)
+	for n := 0; n < b.N; n++ {
+		FromBigInt(big.NewInt(val))
+	}
+}
+
 func TestFromBigIntIsNotDestructive(t *testing.T) {
 	assert := assert.New(t)
 

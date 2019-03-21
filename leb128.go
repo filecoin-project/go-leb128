@@ -2,9 +2,42 @@ package leb128
 
 import (
 	"math/big"
+	"sync"
 )
 
 // LEB128 code based on the sample here: https://en.wikipedia.org/wiki/LEB128.
+
+// Typed wrapper around a sync.Pool
+type bigPool struct {
+	pool sync.Pool
+}
+
+// Retrieves a big.Int from the pool. Note that the returned big.Int can have any value
+// and so must be manually initialized after retrieval.
+func (b *bigPool) Get() *big.Int {
+	out := b.pool.Get()
+	return out.(*big.Int)
+}
+
+// Puts a big.Int into the pool.
+func (b *bigPool) Put(val *big.Int) {
+	b.pool.Put(val)
+}
+
+// Shared instance of bigPool for use in the methods below.
+var pool = &bigPool{
+	pool: sync.Pool{
+		New: func() interface{} {
+			return big.NewInt(0)
+		},
+	},
+}
+
+// Cached big.Int of 1.
+var one = big.NewInt(1)
+
+// Cached big.Int of 128.
+var oneTwentyEight = big.NewInt(128)
 
 // FromUInt64 encodes n with LEB128 and returns the encoded bytes.
 func FromUInt64(n uint64) (out []byte) {
@@ -54,9 +87,13 @@ func FromBigInt(n *big.Int) (out []byte) {
 
 	more := true
 	for more {
-		bBigInt := big.NewInt(0)
-		n.DivMod(n, big.NewInt(128), bBigInt) // This does the mask and the shift.
+		// Note that bBigInt below is set to whatever the
+		// modulus result of DivMod is, and thus doesn't
+		// need to be initialized manually.
+		bBigInt := pool.Get()
+		n.DivMod(n, oneTwentyEight, bBigInt) // This does the mask and the shift.
 		b := uint8(bBigInt.Int64())
+		pool.Put(bBigInt)
 
 		// We just logically right-shifted the bits of n so we need to sign extend
 		// if n is negative (this simulates an arithmetic shift).
@@ -111,7 +148,7 @@ func twosComplementBigInt(n *big.Int) *big.Int {
 		absValBytes[i] = ^b
 	}
 	bitsFlipped := big.NewInt(0).SetBytes(absValBytes)
-	return bitsFlipped.Add(bitsFlipped, big.NewInt(1))
+	return bitsFlipped.Add(bitsFlipped, one)
 }
 
 func signExtend(n *big.Int, size int) {
